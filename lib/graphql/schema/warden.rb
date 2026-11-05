@@ -281,7 +281,7 @@ module GraphQL
       # :call-seq:
       #   get_type(type_name) -> GraphQL::BaseType | nil
       def get_type(type_name)
-        @visible_types ||= read_through do |name|
+        @visible_types ||= read_through_by_name do |name|
           type_defn = @schema.get_type(name, @context, false)
           if type_defn && visible_and_reachable_type?(type_defn)
             type_defn
@@ -322,7 +322,7 @@ module GraphQL
       #   get_field(parent_type, field_name) -> GraphQL::Field | nil
       def get_field(parent_type, field_name)
         @visible_parent_fields ||= read_through do |type|
-          read_through do |f_name|
+          read_through_by_name do |f_name|
             field_defn = @schema.get_field(type, f_name, @context)
             if field_defn && visible_field?(field_defn, nil, type)
               field_defn
@@ -583,6 +583,11 @@ module GraphQL
 
       def read_through
         Hash.new { |h, k| h[k] = yield(k) }.compare_by_identity
+      end
+
+      # AST nodes carry their own name Strings, so cache by value, as Visibility::Profile does
+      def read_through_by_name
+        Hash.new { |h, k| h[k] = yield(k) }
       end
 
       def check_visible(schema, member)
